@@ -7,12 +7,11 @@ bot = telebot.TeleBot(BOT_TOKEN)
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    bot.reply_to(message, "👋 Бот работает!\n\nКидай ссылку на видео.")
+    bot.reply_to(message, "👋 Бот работает!\nКидай ссылку.\n\nДля сложных видео могу использовать cookies (напиши /help)")
 
 @bot.message_handler(func=lambda m: True)
 def download(message):
     url = message.text.strip()
-    
     if not any(x in url for x in ['youtube.com', 'youtu.be', 'tiktok.com', 'instagram.com', 'instagr.am']):
         return bot.reply_to(message, "❌ Только YouTube, TikTok, Instagram!")
 
@@ -20,19 +19,11 @@ def download(message):
 
     try:
         ydl_opts = {
-            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best',
             'outtmpl': 'download.%(ext)s',
             'quiet': True,
             'no_warnings': True,
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['ios', 'android', 'web'],
-                    'skip': ['dash', 'hls']
-                }
-            },
-            'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
+            'extractor_args': {'youtube': {'player_client': ['ios', 'android', 'web']}},
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -40,19 +31,12 @@ def download(message):
             filename = ydl.prepare_filename(info)
 
         with open(filename, 'rb') as f:
-            if filename.lower().endswith(('.mp4', '.mov', '.webm')):
-                bot.send_video(message.chat.id, f, caption="✅ Готово!")
-            else:
-                bot.send_document(message.chat.id, f, caption="✅ Готово!")
+            bot.send_video(message.chat.id, f, caption="✅ Готово!")
 
         os.remove(filename)
 
     except Exception as e:
-        error = str(e).lower()
-        if "sign in" in error or "bot" in error:
-            bot.reply_to(message, "❌ Это видео заблокировано YouTube.\nПопробуй другое видео (обычно короткие работают лучше).")
-        else:
-            bot.reply_to(message, f"❌ Ошибка: {str(e)[:180]}")
+        bot.reply_to(message, "❌ YouTube заблокировал скачивание.\n\nПопробуй другое видео или напиши /help")
 
-print("✅ Бот запущен!")
+print("Бот запущен!")
 bot.polling(none_stop=True)
